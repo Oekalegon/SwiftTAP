@@ -24,7 +24,7 @@ public enum QueryLanguage {
             return identifier
         }
     }
-}   
+}
 
 /// A protocol that represents a query to a TAP service.
 ///
@@ -38,4 +38,3 @@ public protocol TAPQuery {
     /// The query string.
     var query: String { get }
 }
-

@@ -11,7 +11,7 @@ class ADQLQuery: TAPQuery {
     var queryLanguage: QueryLanguage {
         return .adql
     }
-    
+
     init(query: String) {
         self.query = query
     }
@@ -21,17 +21,17 @@ class ADQLQuery: TAPQuery {
     do {
         let service = TAPService(baseURL: URL(string: "https://simbad.u-strasbg.fr/simbad/sim-tap/")!)
         let query = ADQLQuery(query: "SELECT * FROM basic WHERE ra BETWEEN 10 AND 20 AND dec BETWEEN 10 AND 20")
-        
+
         // Simbad still requires the request parameter with the value "doQuery" even though
         // it is deprecated.
-        let parameters: [TAPParameter : String] = [.request: "doQuery"]
+        let parameters: [TAPParameter: String] = [.request: "doQuery"]
 
         // Synchronous request.
         let data = try await service.query(syncMethod: .synchronous, query: query, parameters: parameters)
-        
+
         Logger.tapTests.info("Data: \(data, privacy: .public)")
         let dataString = String(data: data, encoding: .utf8)
-        Logger.tapTests.info("Data String: \(dataString ?? "No data", privacy: .public)")    
+        Logger.tapTests.info("Data String: \(dataString ?? "No data", privacy: .public)")
         assert(true)
     } catch TAPException.serviceError(let responseCode, let responseBody) {
         Logger.tapTests.error("TAP Service Error: \(responseCode, privacy: .public) \(responseBody, privacy: .public)")
@@ -46,17 +46,17 @@ class ADQLQuery: TAPQuery {
     do {
         let service = TAPService(baseURL: URL(string: "https://simbad.u-strasbg.fr/simbad/sim-tap/")!)
         let query = ADQLQuery(query: "SELECT * FROM basic WHERE ra BETWEEN 10 AND 20 AND dec BETWEEN 10 AND 20")
-        
+
         // Simbad still requires the request parameter with the value "doQuery" even though
         // it is deprecated.
-        let parameters: [TAPParameter : String] = [.request: "doQuery"]
+        let parameters: [TAPParameter: String] = [.request: "doQuery"]
 
         // Asynchronous request.
         let data = try await service.query(syncMethod: .asynchronous, query: query, parameters: parameters)
-        
+
         Logger.tapTests.info("Data: \(data, privacy: .public)")
         let dataString = String(data: data, encoding: .utf8)
-        Logger.tapTests.info("Data String: \(dataString ?? "No data", privacy: .public)")    
+        Logger.tapTests.info("Data String: \(dataString ?? "No data", privacy: .public)")
         assert(true)
     } catch TAPException.serviceError(let responseCode, let responseBody) {
         Logger.tapTests.error("TAP Service Error: \(responseCode, privacy: .public) \(responseBody, privacy: .public)")
@@ -66,4 +66,3 @@ class ADQLQuery: TAPQuery {
         assert(false)
     }
 }
-

@@ -1,0 +1,6 @@
+excluded:
+  - build
+  - .build
+  - Carthage
+  - Pods
+  - DerivedData 

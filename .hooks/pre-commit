@@ -8,7 +8,7 @@ echo "Running pre-commit hooks..."
 # Run SwiftLint
 if command -v swiftlint &> /dev/null; then
     echo "Running SwiftLint..."
-    swiftlint lint --strict
+    swiftlint lint --strict --config .swiftlint.yml
 else
     echo "WARNING: SwiftLint not installed. Skipping..."
 fi

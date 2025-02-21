@@ -22,7 +22,8 @@ public enum HTTPMethod: String {
     /// The GET method is used to request a representation of a resource.
     case get = "GET"
 
-    /// The POST method is used to submit an entity to the specified resource, often causing a change in state or side effects on the server.
+    /// The POST method is used to submit an entity to the specified resource, 
+    /// often causing a change in state or side effects on the server.
     case post = "POST"
 
     /// The PUT method is used to update a resource identified by a URI.
@@ -84,14 +85,19 @@ public class TAPService {
     ///   - parameters: The parameters to include in the query.
     /// - Returns: The data returned by the server.
     /// - Throws: An error if the request fails.
-    public func query(syncMethod: TAPSyncMethod, query: TAPQuery, httpMethod: HTTPMethod = .post, parameters: [TAPParameter: String] = [:]) async throws -> Data {
+    public func query(
+        syncMethod: TAPSyncMethod,
+        query: TAPQuery,
+        httpMethod: HTTPMethod = .post,
+        parameters: [TAPParameter: String] = [:]
+    ) async throws -> Data {
         let endpoint = syncMethod.rawValue
-        var requestParameters: [TAPParameter : String] = parameters
+        var requestParameters: [TAPParameter: String] = parameters
         requestParameters[TAPParameter.language] = query.queryLanguage.identifier
         requestParameters[TAPParameter.query] = query.query
         return try await makeQuery(endpoint: endpoint, httpMethod: httpMethod, parameters: requestParameters)
     }
-    
+
     /// Makes a REST query to the TAP service using async/await.
     /// - Parameters:
     ///   - endpoint: The specific endpoint to query.
@@ -99,9 +105,13 @@ public class TAPService {
     ///   - parameters: The parameters to include in the query.
     /// - Returns: The data returned by the server.
     /// - Throws: An error if the request fails.
-    private func makeQuery(endpoint: String, httpMethod: HTTPMethod, parameters: [TAPParameter: String] = [:]) async throws -> Data {
+    private func makeQuery(
+        endpoint: String,
+        httpMethod: HTTPMethod,
+        parameters: [TAPParameter: String] = [:]
+    ) async throws -> Data {
         var url: URL = baseURL.appendingPathComponent(endpoint)
-        
+
         // If the HTTP method is GET, append parameters as query items
         if httpMethod == .get {
             var urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: false)
@@ -110,32 +120,35 @@ public class TAPService {
                 url = urlWithQuery
             }
         }
-        
+
         // Create a URL request
         var request: URLRequest = URLRequest(url: url)
         request.httpMethod = httpMethod.rawValue
-        
+
         // If the HTTP method is POST, encode parameters as form data in the HTTP body
         if httpMethod == .post {
             let formData = parameters.map { "\($0.key.rawValue)=\($0.value)" }.joined(separator: "&")
             request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
             request.httpBody = formData.data(using: .utf8)
         }
-        
+
         // Logging output
         Logger.tap.debug("Request URL: \(request.url?.absoluteString ?? "No URL", privacy: .public)")
         if let body = request.httpBody, let bodyString = String(data: body, encoding: .utf8) {
             Logger.tap.debug("Request Body: \(bodyString, privacy: .public)")
         }
-        
+
         // Perform the request
         let (data, response) = try await URLSession.shared.data(for: request)
-        
+
         // Check the response status code
-        if let httpResponse = response as? HTTPURLResponse, !(200...299).contains(httpResponse.statusCode) {
-            throw NSError(domain: "TAPServiceError", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Invalid response: \(httpResponse.statusCode)"])
+        if let httpResponse = response as? HTTPURLResponse,
+            !(200...299).contains(httpResponse.statusCode) {
+            throw TAPException.serviceError(
+                responseCode: httpResponse.statusCode,
+                responseBody: "Invalid Response: \(httpResponse.statusCode)")
         }
-        
+
         return data
     }
 }
