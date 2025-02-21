@@ -18,9 +18,9 @@ public enum QueryLanguage {
     public var identifier: String {
         switch self {
         case .adql:
-            return "adql"
+            "adql"
         case let .other(identifier):
-            return identifier
+            identifier
         }
     }
 }

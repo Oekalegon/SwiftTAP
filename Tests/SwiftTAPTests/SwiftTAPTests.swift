@@ -8,7 +8,7 @@ class ADQLQuery: TAPQuery {
     var query: String
 
     var queryLanguage: QueryLanguage {
-        return .adql
+        .adql
     }
 
     init(query: String) {
