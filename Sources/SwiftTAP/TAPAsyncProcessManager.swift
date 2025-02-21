@@ -57,7 +57,7 @@ public actor TAPAsyncProcessManager {
             if status == .completed {
                 Logger.tap.debug("Process \(process.id, privacy: .public) completed")
                 return await process.result
-            } else if status == .failed {
+            } else if status == .error {
                 Logger.tap.debug("Process \(process.id, privacy: .public) failed")
                 return nil
             }
