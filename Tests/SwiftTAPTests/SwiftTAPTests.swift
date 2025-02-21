@@ -1,11 +1,10 @@
-import Testing
 import Foundation
 import OSLog
+import Testing
 
 @testable import SwiftTAP
 
 class ADQLQuery: TAPQuery {
-
     var query: String
 
     var queryLanguage: QueryLanguage {
@@ -33,12 +32,12 @@ class ADQLQuery: TAPQuery {
         let dataString = String(data: data, encoding: .utf8)
         Logger.tapTests.info("Data String: \(dataString ?? "No data", privacy: .public)")
         assert(true)
-    } catch TAPException.serviceError(let responseCode, let responseBody) {
+    } catch let TAPException.serviceError(responseCode, responseBody) {
         Logger.tapTests.error("TAP Service Error: \(responseCode, privacy: .public) \(responseBody, privacy: .public)")
-        assert(false)
+        assertionFailure()
     } catch {
         Logger.tapTests.error("Error: \(error, privacy: .public)")
-        assert(false)
+        assertionFailure()
     }
 }
 
@@ -58,11 +57,11 @@ class ADQLQuery: TAPQuery {
         let dataString = String(data: data, encoding: .utf8)
         Logger.tapTests.info("Data String: \(dataString ?? "No data", privacy: .public)")
         assert(true)
-    } catch TAPException.serviceError(let responseCode, let responseBody) {
+    } catch let TAPException.serviceError(responseCode, responseBody) {
         Logger.tapTests.error("TAP Service Error: \(responseCode, privacy: .public) \(responseBody, privacy: .public)")
-        assert(false)
+        assertionFailure()
     } catch {
         Logger.tapTests.error("Error: \(error, privacy: .public)")
-        assert(false)
+        assertionFailure()
     }
 }

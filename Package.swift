@@ -9,16 +9,17 @@ let package = Package(
         .macOS(.v12),
         .iOS(.v15),
         .tvOS(.v15),
-        .watchOS(.v8)
+        .watchOS(.v8),
     ],
     products: [
         // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
             name: "SwiftTAP",
-            targets: ["SwiftTAP"])
+            targets: ["SwiftTAP"]
+        ),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0")
+        .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0"),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -28,6 +29,6 @@ let package = Package(
         .testTarget(
             name: "SwiftTAPTests",
             dependencies: ["SwiftTAP"]
-        )
+        ),
     ]
 )

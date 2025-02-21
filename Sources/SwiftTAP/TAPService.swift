@@ -6,7 +6,6 @@ import OSLog
 /// Note that `SwiftTAP` will run the query asynchronously even if you use `.synchronous`,
 /// but it does mean that the remote service will run the query either asynchronously or synchronously.
 public enum TAPSyncMethod: String {
-
     /// The query will be run synchronously on the service.
     case synchronous = "sync"
 
@@ -18,11 +17,10 @@ public enum TAPSyncMethod: String {
 ///
 /// This enumeration specifies the standard HTTP methods that can be used to query a TAP service.
 public enum HTTPMethod: String {
-
     /// The GET method is used to request a representation of a resource.
     case get = "GET"
 
-    /// The POST method is used to submit an entity to the specified resource, 
+    /// The POST method is used to submit an entity to the specified resource,
     /// often causing a change in state or side effects on the server.
     case post = "POST"
 
@@ -35,7 +33,6 @@ public enum HTTPMethod: String {
 
 /// The parameters that can be used to query a TAP service.
 public enum TAPParameter: String {
-
     /// The query language, e.g. "ADQL" or "SQL".
     case language = "LANG"
 
@@ -47,7 +44,7 @@ public enum TAPParameter: String {
     case request = "REQUEST"
 
     /// The format of the response, e.g. "votable". This property is
-    /// deprecated in favour of `responseFormat`, but it is provided for backwards 
+    /// deprecated in favour of `responseFormat`, but it is provided for backwards
     /// compatibility.
     case format = "FORMAT"
 
@@ -57,7 +54,7 @@ public enum TAPParameter: String {
     /// The maximum number of records to return.
     case maxRecords = "MAXREC"
 
-    /// The run ID. 
+    /// The run ID.
     case runID = "RUNID"
 
     /// Used when uploading a table to the service.
@@ -66,7 +63,6 @@ public enum TAPParameter: String {
 
 /// Instances of this class can be used for interacting with a TAP (Table Access Protocol) service.
 public class TAPService {
-
     /// The base URL of the TAP service.
     public private(set) var baseURL: URL
 
@@ -122,7 +118,7 @@ public class TAPService {
         }
 
         // Create a URL request
-        var request: URLRequest = URLRequest(url: url)
+        var request = URLRequest(url: url)
         request.httpMethod = httpMethod.rawValue
 
         // If the HTTP method is POST, encode parameters as form data in the HTTP body
@@ -143,10 +139,12 @@ public class TAPService {
 
         // Check the response status code
         if let httpResponse = response as? HTTPURLResponse,
-            !(200...299).contains(httpResponse.statusCode) {
+           !(200 ... 299).contains(httpResponse.statusCode)
+        {
             throw TAPException.serviceError(
                 responseCode: httpResponse.statusCode,
-                responseBody: "Invalid Response: \(httpResponse.statusCode)")
+                responseBody: "Invalid Response: \(httpResponse.statusCode)"
+            )
         }
 
         return data

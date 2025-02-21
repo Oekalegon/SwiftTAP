@@ -1,12 +1,11 @@
 import Foundation
 
 /// The query language used in the query request.
-/// 
+///
 /// This enumeration specifies the standard query languages used in a TAP service.
 /// Currently only ADQL is supported by default. If another language is needed,
 /// you can use the `.other(id: "my-query-language")` case to specify the identifier of the language.
 public enum QueryLanguage {
-
     /// The Astronomical Data Query Language (ADQL).
     case adql
 
@@ -20,7 +19,7 @@ public enum QueryLanguage {
         switch self {
         case .adql:
             return "adql"
-        case .other(let identifier):
+        case let .other(identifier):
             return identifier
         }
     }
@@ -31,7 +30,6 @@ public enum QueryLanguage {
 /// This protocol defines a common interface for all query types that can be executed on a TAP service.
 /// It provides a way to specify the query language and the query itself.
 public protocol TAPQuery {
-
     /// The language of the query.
     var queryLanguage: QueryLanguage { get }
 
