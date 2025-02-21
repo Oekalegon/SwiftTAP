@@ -81,6 +81,7 @@ public class TAPService {
     ///   - syncMethod: The method to use for querying the TAP service, either synchronously or asynchronously.
     ///   - query: The query to execute.
     ///   - httpMethod: The HTTP method to use for the query.
+    ///   - parameters: The parameters to include in the query.
     /// - Returns: The data returned by the server.
     /// - Throws: An error if the request fails.
     public func query(syncMethod: TAPSyncMethod, query: TAPQuery, httpMethod: HTTPMethod = .post, parameters: [TAPParameter: String] = [:]) async throws -> Data {
