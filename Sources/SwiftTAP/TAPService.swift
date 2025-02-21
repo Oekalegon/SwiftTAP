@@ -1,6 +1,8 @@
 import Foundation
 import OSLog
 
+// MARK: - Helper enums and structs
+
 /// The method to use for querying the TAP service, either synchronously or asynchronously.
 ///
 /// Note that `SwiftTAP` will run the query asynchronously even if you use `.synchronous`,
@@ -61,8 +63,12 @@ public enum TAPParameter: String {
     case upload = "UPLOAD"
 }
 
+// MARK: - TAPService
+
 /// Instances of this class can be used for interacting with a TAP (Table Access Protocol) service.
 public class TAPService {
+    private let processManager: TAPAsyncProcessManager = .init()
+
     /// The base URL of the TAP service.
     public private(set) var baseURL: URL
 
@@ -86,27 +92,19 @@ public class TAPService {
         query: TAPQuery,
         httpMethod: HTTPMethod = .post,
         parameters: [TAPParameter: String] = [:]
-    ) async throws -> Data {
-        let endpoint = syncMethod.rawValue
+    ) async throws -> Data? {
         var requestParameters: [TAPParameter: String] = parameters
         requestParameters[TAPParameter.language] = query.queryLanguage.identifier
         requestParameters[TAPParameter.query] = query.query
-        return try await makeQuery(endpoint: endpoint, httpMethod: httpMethod, parameters: requestParameters)
+        return try await makeQuery(syncMethod: syncMethod, httpMethod: httpMethod, parameters: requestParameters)
     }
 
-    /// Makes a REST query to the TAP service using async/await.
-    /// - Parameters:
-    ///   - endpoint: The specific endpoint to query.
-    ///   - httpMethod: The HTTP method to use for the query.
-    ///   - parameters: The parameters to include in the query.
-    /// - Returns: The data returned by the server.
-    /// - Throws: An error if the request fails.
     private func makeQuery(
-        endpoint: String,
+        syncMethod: TAPSyncMethod,
         httpMethod: HTTPMethod,
         parameters: [TAPParameter: String] = [:]
-    ) async throws -> Data {
-        var url: URL = baseURL.appendingPathComponent(endpoint)
+    ) async throws -> Data? {
+        var url: URL = baseURL.appendingPathComponent(syncMethod.rawValue)
 
         // If the HTTP method is GET, append parameters as query items
         if httpMethod == .get {
@@ -130,15 +128,26 @@ public class TAPService {
 
         // Logging output
         Logger.tap.debug("Request URL: \(request.url?.absoluteString ?? "No URL", privacy: .public)")
-        if let body = request.httpBody, let bodyString = String(data: body, encoding: .utf8) {
+        if let body: Data = request.httpBody, let bodyString = String(data: body, encoding: .utf8) {
             Logger.tap.debug("Request Body: \(bodyString, privacy: .public)")
         }
 
+        switch syncMethod {
+        case .synchronous:
+            return try await runSynchronousRequest(request: request)
+        case .asynchronous:
+            return try await runAsynchronousRequest(request: request)
+        }
+    }
+
+    private func runSynchronousRequest(
+        request: URLRequest
+    ) async throws -> Data? {
         // Perform the request
         let (data, response) = try await URLSession.shared.data(for: request)
 
         // Check the response status code
-        if let httpResponse = response as? HTTPURLResponse,
+        if let httpResponse: HTTPURLResponse = response as? HTTPURLResponse,
            !(200 ... 299).contains(httpResponse.statusCode)
         {
             throw TAPException.serviceError(
@@ -148,5 +157,14 @@ public class TAPService {
         }
 
         return data
+    }
+
+    private func runAsynchronousRequest(
+        request: URLRequest
+    ) async throws -> Data? {
+        let process = TAPAsyncProcess(request: request)
+        await processManager.addProcess(process)
+        await processManager.startProcess(process.id)
+        return await processManager.waitForCompletion(process.id)
     }
 }
