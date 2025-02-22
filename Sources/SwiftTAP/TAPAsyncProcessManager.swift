@@ -3,6 +3,7 @@ import OSLog
 
 /// Manages the asynchronous processes.
 public actor TAPAsyncProcessManager {
+    /// The processes managed by the manager.
     private var processes: [String: TAPAsyncProcess] = [:]
 
     /// The maximum number of parallel processes.
@@ -24,13 +25,35 @@ public actor TAPAsyncProcessManager {
         processes[id]
     }
 
-    /// Starts the process with the given ID.
+    /// Returns the number of currently running processes
+    private func getRunningProcessCount() async -> Int {
+        var count = 0
+        for process in processes.values {
+            let status = await process.status
+            if case .executing = status {
+                count += 1
+            }
+        }
+        return count
+    }
+
+    /// Starts the process with the given ID. If the maximum number of parallel processes is reached,
+    /// the function will wait until the number of running processes is less than the maximum.
     /// - Parameter id: The ID of the process to start.
     public func startProcess(_ id: String) async throws {
         guard let process = processes[id] else { return }
+
+        // Wait if we've reached max parallel processes
+        while await getRunningProcessCount() >= maxNumberOfParallelProcesses {
+            try await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+        }
+
         Task.detached {
-            Logger.tap.debug("Starting process \(process.id, privacy: .public)")
-            try await process.run()
+            do {
+                try await process.run()
+            } catch {
+                throw error
+            }
         }
     }
 
@@ -38,17 +61,6 @@ public actor TAPAsyncProcessManager {
     /// - Parameter id: The ID of the process to cancel.
     public func cancelProcess(_ id: String) async {
         await processes[id]?.cancel()
-    }
-
-    /// Monitors the processes.
-    public func monitorProcesses() async {
-        while true {
-            for process in processes.values {
-                let status = await process.status
-                Logger.tap.debug("Process \(process.id): \(status.rawValue)")
-            }
-            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
-        }
     }
 
     /// Returns all the processes.
@@ -83,10 +95,10 @@ public actor TAPAsyncProcessManager {
                 Logger.tap.debug("Process \(process.id, privacy: .public) completed")
                 return
             case .error:
-                Logger.tap.error("MANAGER Process \(process.id, privacy: .public) failed")
+                Logger.tap.error("Process \(process.id, privacy: .public) failed")
                 throw TAPException.serviceErrorStatus(process: process)
             case .timeout:
-                Logger.tap.error("MANAGER Process \(process.id, privacy: .public) timed out")
+                Logger.tap.error("Process \(process.id, privacy: .public) timed out")
                 throw TAPException.serviceTimedOut(process: process)
             case .canceled:
                 Logger.tap.warning("Process \(process.id, privacy: .public) canceled")
