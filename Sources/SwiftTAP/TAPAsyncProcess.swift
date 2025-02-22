@@ -65,16 +65,18 @@ public actor TAPAsyncProcess {
     ///
     /// - Parameter request: The request that is encapsulated by this process.
     public init(
-        request: URLRequest
+        id: String?,
+        request: URLRequest,
+        timeout: TimeInterval = 300
     ) {
-        id = UUID().uuidString
+        self.id = id ?? UUID().uuidString
         jobID = nil
         status = .pending
         createdAt = Date()
         updatedAt = Date()
         self.request = request
         result = nil
-        timeout = 300
+        self.timeout = timeout
     }
 
     public func cancel() {
@@ -90,12 +92,10 @@ public actor TAPAsyncProcess {
     /// 4. Retrieve the results
     ///
     /// - Throws: An error if the process fails.
-    public func run() async {
+    public func run() async throws {
         do {
             // 1. Create the async job
             let (data, response) = try await URLSession.shared.data(for: request)
-
-            Logger.tap.debug("ASYNC Process \(self.id, privacy: .public) created async job")
 
             // Try standard 303 redirect first
             if let httpResponse = response as? HTTPURLResponse,
@@ -109,9 +109,6 @@ public actor TAPAsyncProcess {
             // Try parsing XML response for non-compliant services
             if let jobId = parseJobIdFromXML(data) {
                 let jobURL = "\(request.url!)/\(jobId)"
-                Logger.tap.debug("""
-                ASYNC Process \(self.id, privacy: .public) found job ID \(jobId, privacy: .public) in XML
-                """)
                 try await handleStandardJob(jobURL: jobURL)
                 return
             }
@@ -123,9 +120,13 @@ public actor TAPAsyncProcess {
             Status code: \(String(describing: httpResponse?.statusCode), privacy: .public)
             """)
             status = .error
+            throw TAPException.serviceError(
+                responseCode: httpResponse?.statusCode ?? 0,
+                responseBody: httpResponse?.description ?? "Invalid response"
+            )
         } catch {
-            Logger.tap.error("Error running process \(self.id): \(error)")
-            status = .error
+            Logger.tap.error("Error running process \(self.id, privacy: .public): \(error, privacy: .public)")
+            throw error
         }
     }
 
@@ -167,7 +168,7 @@ public actor TAPAsyncProcess {
 
         while !canceled {
             // Check if the process has timed out
-            if Date().timeIntervalSince(createdAt) > timeout {
+            if Date().timeIntervalSince(updatedAt) > timeout {
                 status = .timeout
                 Logger.tap.debug("Process \(self.id, privacy: .public) timed out")
                 throw TAPException.serviceTimedOut(process: self)
@@ -176,6 +177,9 @@ public actor TAPAsyncProcess {
             let (data, _) = try await URLSession.shared.data(for: phaseRequest)
             let phaseString = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
             let phase = TAPAsyncProcessStatus(rawValue: phaseString ?? "") ?? .unknown
+
+            // Set new updated status - the client is recieving status from the service.
+            updatedAt = Date()
 
             switch phase {
             case .completed:
@@ -206,5 +210,6 @@ public actor TAPAsyncProcess {
                 return
             }
         }
+        status = .canceled
     }
 }

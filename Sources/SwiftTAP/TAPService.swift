@@ -67,43 +67,67 @@ public enum TAPParameter: String {
 
 /// Instances of this class can be used for interacting with a TAP (Table Access Protocol) service.
 public class TAPService {
+    /// The manager of the asynchronous processes.
     private let processManager: TAPAsyncProcessManager = .init()
 
     /// The base URL of the TAP service.
     public private(set) var baseURL: URL
 
+    public private(set) var timeout: TimeInterval
+
     /// Creates a new TAP service instance.
     /// - Parameters:
     ///   - baseURL: The base URL of the TAP service.
-    public init(baseURL: URL) {
+    public init(baseURL: URL, timeout: TimeInterval = 300) {
         self.baseURL = baseURL
+        self.timeout = timeout
+    }
+
+    /// Cancels the process with the given ID.
+    /// - Parameter id: The ID of the process to cancel.
+    public func cancelProcess(_ id: String) async {
+        await processManager.cancelProcess(id)
     }
 
     /// Makes a REST query to the TAP service.
     /// - Parameters:
+    ///   - id: The ID of the process to use for the query. If not provided, a new id will be created.
     ///   - syncMethod: The method to use for querying the TAP service, either synchronously or asynchronously.
     ///   - query: The query to execute.
     ///   - httpMethod: The HTTP method to use for the query.
     ///   - parameters: The parameters to include in the query.
-    /// - Returns: The data returned by the server.
+    ///   - awaitCompletion: If `true`, the method will wait for the query to complete before returning. This
+    ///     is only applicable if the query is run asynchronously.
+    /// - Returns: The data returned by the server if synchronous, otherwise a `TAPAsyncProcess` object,
+    ///     which can be used to monitor the status of the query, and/or retrieve the results.
     /// - Throws: An error if the request fails.
     public func query(
+        id: String? = nil,
         syncMethod: TAPSyncMethod,
         query: TAPQuery,
         httpMethod: HTTPMethod = .post,
-        parameters: [TAPParameter: String] = [:]
-    ) async throws -> Data? {
+        parameters: [TAPParameter: String] = [:],
+        awaitCompletion: Bool = false
+    ) async throws -> Any? {
         var requestParameters: [TAPParameter: String] = parameters
         requestParameters[TAPParameter.language] = query.queryLanguage.identifier
         requestParameters[TAPParameter.query] = query.query
-        return try await makeQuery(syncMethod: syncMethod, httpMethod: httpMethod, parameters: requestParameters)
+        return try await makeQuery(
+            id: id,
+            syncMethod: syncMethod,
+            httpMethod: httpMethod,
+            parameters: requestParameters,
+            awaitCompletion: awaitCompletion
+        )
     }
 
     private func makeQuery(
+        id: String?,
         syncMethod: TAPSyncMethod,
         httpMethod: HTTPMethod,
-        parameters: [TAPParameter: String] = [:]
-    ) async throws -> Data? {
+        parameters: [TAPParameter: String] = [:],
+        awaitCompletion: Bool = false
+    ) async throws -> Any? {
         var url: URL = baseURL.appendingPathComponent(syncMethod.rawValue)
 
         // If the HTTP method is GET, append parameters as query items
@@ -136,7 +160,13 @@ public class TAPService {
         case .synchronous:
             return try await runSynchronousRequest(request: request)
         case .asynchronous:
-            return try await runAsynchronousRequest(request: request)
+            let process = try await runAsynchronousRequest(id: id, request: request, awaitCompletion: awaitCompletion)
+            if awaitCompletion {
+                // If we are awaiting completion, return the result of the process should be returned.
+                return await process.result
+            } else {
+                return process
+            }
         }
     }
 
@@ -160,11 +190,16 @@ public class TAPService {
     }
 
     private func runAsynchronousRequest(
-        request: URLRequest
-    ) async throws -> Data? {
-        let process = TAPAsyncProcess(request: request)
+        id: String?,
+        request: URLRequest,
+        awaitCompletion: Bool = false
+    ) async throws -> TAPAsyncProcess {
+        let process = TAPAsyncProcess(id: id, request: request, timeout: self.timeout)
         await processManager.addProcess(process)
-        await processManager.startProcess(process.id)
-        return await processManager.waitForCompletion(process.id)
+        try await processManager.startProcess(process.id)
+        if awaitCompletion {
+            try await processManager.waitForCompletion(process.id)
+        }
+        return process
     }
 }
