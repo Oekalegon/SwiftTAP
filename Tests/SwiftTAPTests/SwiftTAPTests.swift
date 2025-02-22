@@ -26,10 +26,11 @@ class ADQLQuery: TAPQuery {
         let parameters: [TAPParameter: String] = [.request: "doQuery"]
 
         // Synchronous request.
-        if let data = try await service.query(
+        if let data = try await service.syncQuery(
+            query: query,
             syncMethod: .synchronous,
-            query: query, parameters: parameters
-        ) as? Data {
+            parameters: parameters
+        ) {
             let msg = "Data: \(data)"
             Logger.tapTests.info("Data: \(msg, privacy: .public)")
             let dataString = String(data: data, encoding: .utf8)
@@ -57,12 +58,11 @@ class ADQLQuery: TAPQuery {
         let parameters: [TAPParameter: String] = [.request: "doQuery"]
 
         // Asynchronous request.
-        if let data = try await service.query(
-            syncMethod: .asynchronous,
+        if let data = try await service.syncQuery(
             query: query,
-            parameters: parameters,
-            awaitCompletion: true
-        ) as? Data {
+            syncMethod: .asynchronous,
+            parameters: parameters
+        ) {
             Logger.tapTests.info("Data: \(data, privacy: .public)")
             let dataString = String(data: data, encoding: .utf8)
             Logger.tapTests.info("Data String: \(dataString ?? "No data", privacy: .public)")
@@ -95,12 +95,11 @@ class ADQLQuery: TAPQuery {
         let parameters: [TAPParameter: String] = [.request: "doQuery"]
 
         // Asynchronous request.
-        if let data = try await service.query(
-            syncMethod: .asynchronous,
+        if let data = try await service.syncQuery(
             query: query,
-            parameters: parameters,
-            awaitCompletion: true
-        ) as? Data {
+            syncMethod: .asynchronous,
+            parameters: parameters
+        ) {
             // This should never be reached as the request should time out.
             assertionFailure("Unexpected data returned \(data)")
         } else {
@@ -135,23 +134,18 @@ class ADQLQuery: TAPQuery {
         let processId = "Async Request to be canceled"
 
         // Asynchronous request.
-        if let process = try await service.query(
+        let process = try await service.asyncQuery(
             id: processId,
-            syncMethod: .asynchronous,
             query: query,
-            parameters: parameters,
-            awaitCompletion: false
-        ) as? TAPAsyncProcess {
-            var status = await process.status
-            assert(status != .canceled)
-            await service.cancelProcess(processId)
-            try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 second
-            status = await process.status
-            Logger.tapTests.info("Process status: \("\(status)", privacy: .public)")
-            assert(status == .canceled)
-        } else {
-            assertionFailure("No process returned")
-        }
+            parameters: parameters
+        )
+        var status = await process.status
+        assert(status != .canceled)
+        await service.cancelProcess(processId)
+        try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 second
+        status = await process.status
+        Logger.tapTests.info("Process status: \("\(status)", privacy: .public)")
+        assert(status == .canceled)
     } catch let TAPException.serviceError(responseCode, responseBody) {
         Logger.tapTests.error("TAP Service Error: \(responseCode, privacy: .public) \(responseBody, privacy: .public)")
         assertionFailure()

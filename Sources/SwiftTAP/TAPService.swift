@@ -78,6 +78,7 @@ public class TAPService {
     /// Creates a new TAP service instance.
     /// - Parameters:
     ///   - baseURL: The base URL of the TAP service.
+    ///   - timeout: The timeout for the TAP service in seconds.
     public init(baseURL: URL, timeout: TimeInterval = 300) {
         self.baseURL = baseURL
         self.timeout = timeout
@@ -89,45 +90,85 @@ public class TAPService {
         await processManager.cancelProcess(id)
     }
 
-    /// Makes a REST query to the TAP service.
+    /// Runs a synchronous query to the TAP service.
+    ///
+    /// Note that you can run the query asynchronously on the TAP service while running
+    /// it synchronously locally. This simply means that the local process will query the
+    /// remote service repeatedly for status updates until the query is complete. Only then
+    /// will the local process (this function) return the results. Set the `syncMethod` parameter
+    /// to `.asynchronous` to run the query asynchronously on the TAP service.
+    ///
+    /// If you set the `syncMethod` parameter to `.synchronous`, the remote service will only
+    /// return the results once the query is complete.
+    ///
     /// - Parameters:
-    ///   - id: The ID of the process to use for the query. If not provided, a new id will be created.
-    ///   - syncMethod: The method to use for querying the TAP service, either synchronously or asynchronously.
     ///   - query: The query to execute.
+    ///   - syncMethod: The method to use for querying the TAP service, either synchronously or asynchronously.
     ///   - httpMethod: The HTTP method to use for the query.
     ///   - parameters: The parameters to include in the query.
-    ///   - awaitCompletion: If `true`, the method will wait for the query to complete before returning. This
-    ///     is only applicable if the query is run asynchronously.
     /// - Returns: The data returned by the server if synchronous, otherwise a `TAPAsyncProcess` object,
     ///     which can be used to monitor the status of the query, and/or retrieve the results.
-    /// - Throws: An error if the request fails.
-    public func query(
-        id: String? = nil,
-        syncMethod: TAPSyncMethod,
+    public func syncQuery(
         query: TAPQuery,
+        syncMethod: TAPSyncMethod,
         httpMethod: HTTPMethod = .post,
-        parameters: [TAPParameter: String] = [:],
-        awaitCompletion: Bool = false
-    ) async throws -> Any? {
+        parameters: [TAPParameter: String] = [:]
+    ) async throws -> Data? {
         var requestParameters: [TAPParameter: String] = parameters
         requestParameters[TAPParameter.language] = query.queryLanguage.identifier
         requestParameters[TAPParameter.query] = query.query
-        return try await makeQuery(
-            id: id,
+        let request = try await makeRequest(
+            id: nil,
             syncMethod: syncMethod,
             httpMethod: httpMethod,
-            parameters: requestParameters,
-            awaitCompletion: awaitCompletion
+            parameters: requestParameters
         )
+        switch syncMethod {
+        case .synchronous:
+            return try await runSynchronousRequest(request: request)
+        case .asynchronous:
+            let result = try await runAsynchronousRequest(id: nil, request: request, awaitCompletion: true)
+            return await result.result
+        }
     }
 
-    private func makeQuery(
-        id: String?,
+    /// Runs a query to the TAP service asynchronously.
+    ///
+    /// This function will return a `TAPAsyncProcess` object, which can be used to monitor the status of the query.
+    /// You will have to monitor the status of the query yourself, and when the query is complete, you can use the
+    /// `result` property of the `TAPAsyncProcess` object to get the results.
+    ///
+    /// - Parameters:
+    ///   - id: The ID of the process to monitor.
+    ///   - query: The query to execute.
+    ///   - httpMethod: The HTTP method to use for the query.
+    ///   - parameters: The parameters to include in the query.
+    /// - Returns: A `TAPAsyncProcess` object, which can be used to monitor the status of the query,
+    ///     and/or retrieve the results.
+    public func asyncQuery(
+        id: String? = nil,
+        query: TAPQuery,
+        httpMethod: HTTPMethod = .post,
+        parameters: [TAPParameter: String] = [:]
+    ) async throws -> TAPAsyncProcess {
+        var requestParameters: [TAPParameter: String] = parameters
+        requestParameters[TAPParameter.language] = query.queryLanguage.identifier
+        requestParameters[TAPParameter.query] = query.query
+        let request = try await makeRequest(
+            id: nil,
+            syncMethod: .asynchronous,
+            httpMethod: httpMethod,
+            parameters: requestParameters
+        )
+        return try await runAsynchronousRequest(id: id, request: request)
+    }
+
+    private func makeRequest(
+        id _: String?,
         syncMethod: TAPSyncMethod,
         httpMethod: HTTPMethod,
-        parameters: [TAPParameter: String] = [:],
-        awaitCompletion: Bool = false
-    ) async throws -> Any? {
+        parameters: [TAPParameter: String] = [:]
+    ) async throws -> URLRequest {
         var url: URL = baseURL.appendingPathComponent(syncMethod.rawValue)
 
         // If the HTTP method is GET, append parameters as query items
@@ -150,24 +191,7 @@ public class TAPService {
             request.httpBody = formData.data(using: .utf8)
         }
 
-        // Logging output
-        Logger.tap.debug("Request URL: \(request.url?.absoluteString ?? "No URL", privacy: .public)")
-        if let body: Data = request.httpBody, let bodyString = String(data: body, encoding: .utf8) {
-            Logger.tap.debug("Request Body: \(bodyString, privacy: .public)")
-        }
-
-        switch syncMethod {
-        case .synchronous:
-            return try await runSynchronousRequest(request: request)
-        case .asynchronous:
-            let process = try await runAsynchronousRequest(id: id, request: request, awaitCompletion: awaitCompletion)
-            if awaitCompletion {
-                // If we are awaiting completion, return the result of the process should be returned.
-                return await process.result
-            } else {
-                return process
-            }
-        }
+        return request
     }
 
     private func runSynchronousRequest(

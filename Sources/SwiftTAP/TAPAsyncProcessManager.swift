@@ -70,7 +70,6 @@ public actor TAPAsyncProcessManager {
 
     /// Waits for completion of the process with the given ID.
     /// - Parameter id: The ID of the process to wait for.
-    /// - Returns: The result of the process.
     public func waitForCompletion(_ id: String) async throws {
         guard let process = processes[id] else {
             Logger.tap.error("Process \(id, privacy: .public) not found")

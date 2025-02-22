@@ -63,7 +63,9 @@ public actor TAPAsyncProcess {
 
     /// Initialize a new asynchronous TAP process.
     ///
+    /// - Parameter id: The ID of the process. If nil, a new UUID will be generated.
     /// - Parameter request: The request that is encapsulated by this process.
+    /// - Parameter timeout: The timeout for the process in seconds.
     public init(
         id: String?,
         request: URLRequest,
