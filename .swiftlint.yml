@@ -1,0 +1,12 @@
+excluded:
+  - build
+  - .build
+  - Carthage
+  - Pods
+  - DerivedData 
+
+  # By default, SwiftLint uses a set of sensible default rules you can adjust:
+disabled_rules: # rule identifiers turned on by default to exclude from running
+  - trailing_comma # against swift-format
+  - opening_brace  # against swift-format
+  - redundant_self  

@@ -1,0 +1,38 @@
+#!/bin/bash
+
+# Exit on any error
+set -e
+
+echo "Running pre-commit hooks..."
+
+# Run SwiftLint
+if command -v swiftlint &> /dev/null; then
+    echo "Running SwiftLint..."
+    swiftlint lint --strict --config .swiftlint.yml
+else
+    echo "WARNING: SwiftLint not installed. Skipping..."
+fi
+
+# Run SwiftFormat
+if command -v swiftformat &> /dev/null; then
+    echo "Running SwiftFormat..."
+    swiftformat .
+    # Add formatted files back to staging
+    git add .
+else
+    echo "WARNING: SwiftFormat not installed. Skipping..."
+fi
+
+# Build the project
+echo "Building project..."
+swift build
+
+# Run tests
+echo "Running tests..."
+swift test
+
+# Generate documentation (if using DocC)
+echo "Generating documentation..."
+swift package generate-documentation
+
+echo "Pre-commit hooks completed successfully!"
