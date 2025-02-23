@@ -122,7 +122,7 @@ public actor TAPAsyncProcess {
             Status code: \(String(describing: httpResponse?.statusCode), privacy: .public)
             """)
             status = .error
-            throw TAPException.serviceError(
+            throw TAPError.serviceError(
                 responseCode: httpResponse?.statusCode ?? 0,
                 responseBody: httpResponse?.description ?? "Invalid response"
             )
@@ -173,7 +173,7 @@ public actor TAPAsyncProcess {
             if Date().timeIntervalSince(updatedAt) > timeout {
                 status = .timeout
                 Logger.tap.debug("Process \(self.id, privacy: .public) timed out")
-                throw TAPException.serviceTimedOut(process: self)
+                throw TAPError.serviceTimedOut(process: self)
             }
 
             let (data, _) = try await URLSession.shared.data(for: phaseRequest)
@@ -199,7 +199,7 @@ public actor TAPAsyncProcess {
                 Logger.tap.debug("""
                 Process \(self.id, privacy: .public) failed because the TAP service returned an error
                 """)
-                throw TAPException.serviceErrorStatus(process: self)
+                throw TAPError.serviceErrorStatus(process: self)
             case .executing, .pending, .queued:
                 status = phase
                 try await Task.sleep(nanoseconds: 1_000_000_000)

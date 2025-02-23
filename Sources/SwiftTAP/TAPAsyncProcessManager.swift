@@ -96,10 +96,10 @@ public actor TAPAsyncProcessManager {
                 return
             case .error:
                 Logger.tap.error("Process \(process.id, privacy: .public) failed")
-                throw TAPException.serviceErrorStatus(process: process)
+                throw TAPError.serviceErrorStatus(process: process)
             case .timeout:
                 Logger.tap.error("Process \(process.id, privacy: .public) timed out")
-                throw TAPException.serviceTimedOut(process: process)
+                throw TAPError.serviceTimedOut(process: process)
             case .canceled:
                 Logger.tap.warning("Process \(process.id, privacy: .public) canceled")
                 return

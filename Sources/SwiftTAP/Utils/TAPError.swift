@@ -1,7 +1,7 @@
 import Foundation
 
 /// An exception that can be thrown by the SwiftTAP library.
-enum TAPException: Error {
+enum TAPError: Error {
     /// The URL request to the service returned an error.
     case serviceError(responseCode: Int, responseBody: String)
 

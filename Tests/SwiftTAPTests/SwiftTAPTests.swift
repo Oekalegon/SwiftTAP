@@ -39,7 +39,7 @@ class ADQLQuery: TAPQuery {
         } else {
             assertionFailure("No data returned")
         }
-    } catch let TAPException.serviceError(responseCode, responseBody) {
+    } catch let TAPError.serviceError(responseCode, responseBody) {
         Logger.tapTests.error("TAP Service Error: \(responseCode, privacy: .public) \(responseBody, privacy: .public)")
         assertionFailure()
     } catch {
@@ -70,7 +70,7 @@ class ADQLQuery: TAPQuery {
         } else {
             assertionFailure("No data returned")
         }
-    } catch let TAPException.serviceError(responseCode, responseBody) {
+    } catch let TAPError.serviceError(responseCode, responseBody) {
         Logger.tapTests.error("TAP Service Error: \(responseCode, privacy: .public) \(responseBody, privacy: .public)")
         assertionFailure()
     } catch {
@@ -105,10 +105,10 @@ class ADQLQuery: TAPQuery {
         } else {
             assertionFailure("No data returned")
         }
-    } catch let TAPException.serviceError(responseCode, responseBody) {
+    } catch let TAPError.serviceError(responseCode, responseBody) {
         Logger.tapTests.error("TAP Service Error: \(responseCode, privacy: .public) \(responseBody, privacy: .public)")
         assertionFailure()
-    } catch let TAPException.serviceTimedOut(process) {
+    } catch let TAPError.serviceTimedOut(process) {
         let processId = await process.id
         Logger.tapTests.info("TAP Service Timed Out as expected: \(processId, privacy: .public)")
         assert(true)
@@ -146,10 +146,10 @@ class ADQLQuery: TAPQuery {
         status = await process.status
         Logger.tapTests.info("Process status: \("\(status)", privacy: .public)")
         assert(status == .canceled)
-    } catch let TAPException.serviceError(responseCode, responseBody) {
+    } catch let TAPError.serviceError(responseCode, responseBody) {
         Logger.tapTests.error("TAP Service Error: \(responseCode, privacy: .public) \(responseBody, privacy: .public)")
         assertionFailure()
-    } catch let TAPException.serviceTimedOut(process) {
+    } catch let TAPError.serviceTimedOut(process) {
         let processId = await process.id
         Logger.tapTests.info("TAP Service Timed Out as expected: \(processId, privacy: .public)")
         assertionFailure()

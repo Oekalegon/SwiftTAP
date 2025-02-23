@@ -204,7 +204,7 @@ public class TAPService {
         if let httpResponse: HTTPURLResponse = response as? HTTPURLResponse,
            !(200 ... 299).contains(httpResponse.statusCode)
         {
-            throw TAPException.serviceError(
+            throw TAPError.serviceError(
                 responseCode: httpResponse.statusCode,
                 responseBody: "Invalid Response: \(httpResponse.statusCode)"
             )
